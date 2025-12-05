@@ -5,7 +5,8 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "init": "npx ts-node scripts/initialize.ts",
     "buy": "npx ts-node scripts/buy.ts",
-    "state": "npx ts-node scripts/getState.ts"
+    "state": "npx ts-node scripts/getState.ts",
+    "balance": "npx ts-node scripts/check_balance.ts"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
