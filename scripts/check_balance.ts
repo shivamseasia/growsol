@@ -30,7 +30,7 @@ async function checkBalance(buyerPubkeyString?: string) {
 
   console.log("\n====== SPL TOKEN BALANCE ======");
   console.log("Raw Amount:", tokenAcct.value.amount);
-  console.log("UI Amount:", tokenAcct.value.uiAmount);
+  console.log("UI Amount:", tokenAcct.value.uiAmountString);
   console.log("Decimals:", tokenAcct.value.decimals);
 }
 
