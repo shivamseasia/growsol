@@ -12,7 +12,7 @@ growsol = "6Mn8wPAxmjeJxJ3YdtMTChA2RTuQF4nFZM6EJ3H34STD"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
+cluster = "https://api.devnet.solana.com"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
