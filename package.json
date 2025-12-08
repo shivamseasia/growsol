@@ -6,12 +6,19 @@
     "init": "npx ts-node scripts/initialize.ts",
     "buy": "npx ts-node scripts/buy.ts",
     "state": "npx ts-node scripts/getState.ts",
-    "balance": "npx ts-node scripts/check_balance.ts"
+    "balance": "npx ts-node scripts/check_balance.ts",
+    "claim": "npx ts-node scripts/claim.ts",
+    "withdraw-sol": "npx ts-node scripts/withdraw_sol.ts",
+    "withdraw-tokens": "npx ts-node scripts/withdraw_token.ts",
+    "set-sale": "ts-node ./scripts/set_presale_times.ts",
+    "pause-sale": "ts-node ./scripts/pause_resume.ts pause",
+    "resume-sale": "ts-node ./scripts/pause_resume.ts resume"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
