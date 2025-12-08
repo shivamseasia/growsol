@@ -12,7 +12,6 @@ dotenv.config();
 
 async function withdraw(solAmount: number) {
   const owner = provider.wallet.publicKey;
-
   const presaleState = presaleStatePda();
   const treasury = treasuryPda();
 
@@ -30,7 +29,7 @@ async function withdraw(solAmount: number) {
       owner,
       presaleState,
       treasury,
-      systemProgram: anchor.web3.SystemProgram.programId,
+      systemProgram: anchor.web3.SystemProgram.programId, // still required in context
     })
     .rpc();
 

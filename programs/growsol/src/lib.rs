@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::sysvar::rent::Rent;
 use anchor_lang::system_program;
-use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 
 declare_id!("6Mn8wPAxmjeJxJ3YdtMTChA2RTuQF4nFZM6EJ3H34STD");
 
@@ -16,7 +16,7 @@ pub mod growsol {
     /// Initialize the presale state: ladder prices, caps, owner, timing, etc.
     pub fn initialize(
         ctx: Context<Initialize>,
-        usd_per_sol: u64, // whole dollars (e.g., 20 => $20)
+        usd_per_sol: u64,      // whole dollars (e.g., 20 => $20)
         presale_start_ts: i64, // unix timestamp
         presale_end_ts: i64,   // unix timestamp
     ) -> Result<()> {
@@ -63,6 +63,11 @@ pub mod growsol {
         // total allocated (raw units)
         state.total_allocated = 0;
 
+        msg!(
+            "Presale vault (ATA) initialized: {}",
+            ctx.accounts.presale_token_account.key()
+        );
+
         emit!(Initialized {
             owner: state.owner,
             start_ts: state.presale_start,
@@ -80,8 +85,14 @@ pub mod growsol {
 
         // Sale must be active and not paused
         require!(!state.paused, PresaleError::SalePaused);
-        require!(clock.unix_timestamp >= state.presale_start, PresaleError::SaleNotStarted);
-        require!(clock.unix_timestamp <= state.presale_end, PresaleError::SaleEnded);
+        require!(
+            clock.unix_timestamp >= state.presale_start,
+            PresaleError::SaleNotStarted
+        );
+        require!(
+            clock.unix_timestamp <= state.presale_end,
+            PresaleError::SaleEnded
+        );
         require!(state.usd_per_sol > 0, PresaleError::InvalidOraclePrice);
         require!(sol_amount > 0, PresaleError::ZeroPurchase);
 
@@ -110,10 +121,7 @@ pub mod growsol {
             .ok_or(PresaleError::MathOverflow)?; // in cents
 
         // helper closure to get price cents and remaining raw cap for a stage
-        fn stage_price_and_remaining(
-            state: &PresaleState,
-            stage: u8,
-        ) -> Result<(u64, u64)> {
+        fn stage_price_and_remaining(state: &PresaleState, stage: u8) -> Result<(u64, u64)> {
             match stage {
                 1 => Ok((state.stage_1_price, state.stage_1_cap - state.stage_1_sold)),
                 2 => Ok((state.stage_2_price, state.stage_2_cap - state.stage_2_sold)),
@@ -169,26 +177,36 @@ pub mod growsol {
 
             // Update stage sold counters (raw)
             match stage {
-                1 => state.stage_1_sold = state
-                    .stage_1_sold
-                    .checked_add(to_allocate_raw as u64)
-                    .ok_or(PresaleError::MathOverflow)?,
-                2 => state.stage_2_sold = state
-                    .stage_2_sold
-                    .checked_add(to_allocate_raw as u64)
-                    .ok_or(PresaleError::MathOverflow)?,
-                3 => state.stage_3_sold = state
-                    .stage_3_sold
-                    .checked_add(to_allocate_raw as u64)
-                    .ok_or(PresaleError::MathOverflow)?,
-                4 => state.stage_4_sold = state
-                    .stage_4_sold
-                    .checked_add(to_allocate_raw as u64)
-                    .ok_or(PresaleError::MathOverflow)?,
-                5 => state.stage_5_sold = state
-                    .stage_5_sold
-                    .checked_add(to_allocate_raw as u64)
-                    .ok_or(PresaleError::MathOverflow)?,
+                1 => {
+                    state.stage_1_sold = state
+                        .stage_1_sold
+                        .checked_add(to_allocate_raw as u64)
+                        .ok_or(PresaleError::MathOverflow)?
+                }
+                2 => {
+                    state.stage_2_sold = state
+                        .stage_2_sold
+                        .checked_add(to_allocate_raw as u64)
+                        .ok_or(PresaleError::MathOverflow)?
+                }
+                3 => {
+                    state.stage_3_sold = state
+                        .stage_3_sold
+                        .checked_add(to_allocate_raw as u64)
+                        .ok_or(PresaleError::MathOverflow)?
+                }
+                4 => {
+                    state.stage_4_sold = state
+                        .stage_4_sold
+                        .checked_add(to_allocate_raw as u64)
+                        .ok_or(PresaleError::MathOverflow)?
+                }
+                5 => {
+                    state.stage_5_sold = state
+                        .stage_5_sold
+                        .checked_add(to_allocate_raw as u64)
+                        .ok_or(PresaleError::MathOverflow)?
+                }
                 _ => return Err(PresaleError::InvalidStage.into()),
             }
 
@@ -245,14 +263,19 @@ pub mod growsol {
         let state = &mut ctx.accounts.presale_state;
         let user_alloc = &mut ctx.accounts.user_allocation;
 
-        require!(user_alloc.buyer == ctx.accounts.buyer.key(), PresaleError::Unauthorized);
+        require!(
+            user_alloc.buyer == ctx.accounts.buyer.key(),
+            PresaleError::Unauthorized
+        );
 
         // compute claimable raw = allocated_raw - claimed_raw
         let allocated = user_alloc.allocated_raw as u128;
         let claimed = user_alloc.claimed_raw as u128;
         require!(allocated > claimed, PresaleError::NothingToClaim);
 
-        let to_claim_raw_u128 = allocated.checked_sub(claimed).ok_or(PresaleError::MathOverflow)?;
+        let to_claim_raw_u128 = allocated
+            .checked_sub(claimed)
+            .ok_or(PresaleError::MathOverflow)?;
         let to_claim_raw_u64 = to_claim_raw_u128
             .try_into()
             .map_err(|_| PresaleError::MathOverflow)?;
@@ -291,31 +314,25 @@ pub mod growsol {
     /// Owner withdraw SOL from treasury PDA to the owner's wallet
     pub fn withdraw_sol(ctx: Context<WithdrawSol>, amount: u64) -> Result<()> {
         let state = &ctx.accounts.presale_state;
-        require!(ctx.accounts.owner.key() == state.owner, PresaleError::Unauthorized);
 
-        // Transfer lamports from treasury to owner
-        // treasury is a system account; to move lamports we need to invoke system program with signer seeds (treasury PDA is not a signer normally,
-        // but system_program::transfer uses from account as signer — we actually must use invoke_signed to debit the PDA).
-        // However, Anchor's system_program::transfer cannot sign for a PDA; instead we use invoke_signed.
+        // Only the owner can withdraw
+        require!(
+            ctx.accounts.owner.key() == state.owner,
+            PresaleError::Unauthorized
+        );
+
         let treasury_info = ctx.accounts.treasury.to_account_info();
         let owner_info = ctx.accounts.owner.to_account_info();
 
-        let seeds = &[b"treasury".as_ref(), &[state.treasury_bump][..]];
-        let signer_seeds = &[&seeds[..]];
+        // Ensure treasury has enough lamports
+        require!(
+            **treasury_info.lamports.borrow() >= amount,
+            PresaleError::InsufficientFunds
+        );
 
-        anchor_lang::solana_program::program::invoke_signed(
-            &anchor_lang::solana_program::system_instruction::transfer(
-                treasury_info.key,
-                owner_info.key,
-                amount,
-            ),
-            &[
-                treasury_info.clone(),
-                owner_info.clone(),
-                ctx.accounts.system_program.to_account_info().clone(),
-            ],
-            signer_seeds,
-        )?;
+        // Manually transfer lamports from treasury PDA to owner
+        **treasury_info.try_borrow_mut_lamports()? -= amount;
+        **owner_info.try_borrow_mut_lamports()? += amount;
 
         emit!(WithdrawnSol {
             owner: state.owner,
@@ -328,24 +345,32 @@ pub mod growsol {
     /// Owner withdraw tokens from mint to an owner's ATA (for leftover tokens or team allocation).
     pub fn withdraw_token(ctx: Context<WithdrawToken>, amount_raw: u64) -> Result<()> {
         let state = &ctx.accounts.presale_state;
-        require!(ctx.accounts.owner.key() == state.owner, PresaleError::Unauthorized);
 
+        // Only owner can withdraw
+        require!(
+            ctx.accounts.owner.key() == state.owner,
+            PresaleError::Unauthorized
+        );
+
+        // Transfer tokens from presale vault / mint's token account to owner's ATA
+        let cpi_accounts = token::Transfer {
+            from: ctx.accounts.presale_token_account.to_account_info(),
+            to: ctx.accounts.owner_token_account.to_account_info(),
+            authority: ctx.accounts.mint_auth.to_account_info(),
+        };
+
+        // PDA signer seeds
         let mint_auth_seeds = &[b"mint_auth".as_ref(), &[state.mint_bump][..]];
         let signer_seeds = &[&mint_auth_seeds[..]];
 
-        // Mint to owner's token account (owner must provide their ATA)
-        token::mint_to(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                MintTo {
-                    mint: ctx.accounts.mint.to_account_info(),
-                    to: ctx.accounts.owner_token_account.to_account_info(),
-                    authority: ctx.accounts.mint_auth.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            amount_raw,
-        )?;
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        );
+
+        // Perform transfer
+        token::transfer(cpi_ctx, amount_raw)?;
 
         emit!(WithdrawnToken {
             owner: state.owner,
@@ -356,17 +381,21 @@ pub mod growsol {
     }
 
     /// Set presale start/end timestamps (owner only)
-    pub fn set_presale_times(ctx: Context<AdminSetTimes>, start_ts: i64, end_ts: i64) -> Result<()> {
+    pub fn set_presale_times(
+        ctx: Context<AdminSetTimes>,
+        start_ts: i64,
+        end_ts: i64,
+    ) -> Result<()> {
         let state: &mut Account<'_, PresaleState> = &mut ctx.accounts.presale_state;
-        require!(ctx.accounts.owner.key() == state.owner, PresaleError::Unauthorized);
+        require!(
+            ctx.accounts.owner.key() == state.owner,
+            PresaleError::Unauthorized
+        );
 
         state.presale_start = start_ts;
         state.presale_end = end_ts;
 
-        emit!(PresaleTimesUpdated {
-            start_ts,
-            end_ts,
-        });
+        emit!(PresaleTimesUpdated { start_ts, end_ts });
 
         Ok(())
     }
@@ -374,7 +403,10 @@ pub mod growsol {
     /// Pause sale
     pub fn pause_sale(ctx: Context<AdminToggleSale>) -> Result<()> {
         let state = &mut ctx.accounts.presale_state;
-        require!(ctx.accounts.owner.key() == state.owner, PresaleError::Unauthorized);
+        require!(
+            ctx.accounts.owner.key() == state.owner,
+            PresaleError::Unauthorized
+        );
         state.paused = true;
         emit!(SalePaused { owner: state.owner });
         Ok(())
@@ -383,13 +415,15 @@ pub mod growsol {
     /// Resume sale
     pub fn resume_sale(ctx: Context<AdminToggleSale>) -> Result<()> {
         let state = &mut ctx.accounts.presale_state;
-        require!(ctx.accounts.owner.key() == state.owner, PresaleError::Unauthorized);
+        require!(
+            ctx.accounts.owner.key() == state.owner,
+            PresaleError::Unauthorized
+        );
         state.paused = false;
         emit!(SaleResumed { owner: state.owner });
         Ok(())
     }
 }
-
 
 #[derive(Accounts)]
 #[instruction(usd_per_sol: u64, presale_start_ts: i64, presale_end_ts: i64)]
@@ -437,10 +471,18 @@ pub struct Initialize<'info> {
     )]
     pub treasury: UncheckedAccount<'info>,
 
-    /// programs
+    #[account(
+        init,
+        payer = owner,
+        associated_token::mint = mint,
+        associated_token::authority = presale_state,
+    )]
+    pub presale_token_account: Account<'info, TokenAccount>,
+
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[derive(Accounts)]
@@ -557,6 +599,9 @@ pub struct WithdrawToken<'info> {
     )]
     pub owner_token_account: Account<'info, TokenAccount>,
 
+    #[account(mut)]
+    pub presale_token_account: Account<'info, TokenAccount>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
@@ -590,7 +635,7 @@ pub struct UserAllocation {
     pub buyer: Pubkey,
     pub allocated_raw: u64, // total allocated (raw units)
     pub claimed_raw: u64,   // total claimed (raw units)
-    // future: add refunded flag, vesting schedule fields, etc.
+                            // future: add refunded flag, vesting schedule fields, etc.
 }
 
 impl UserAllocation {
@@ -726,4 +771,6 @@ pub enum PresaleError {
     NothingToClaim,
     #[msg("Buyer not authorized for this allocation")]
     UnauthorizedBuyer,
+    #[msg("Insufficient funds in treasury")]
+    InsufficientFunds,
 }

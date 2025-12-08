@@ -12,12 +12,19 @@ async function withdrawToken(amountRaw: number) {
   const mintAuth = mintAuthPda();
   const mint = new PublicKey(process.env.MINT_ADDRESS!);
 
-  // Owner ATA for mint (will be created by instruction)
+  // Owner ATA for mint (will be created if missing)
   const ownerAta = await anchor.utils.token.associatedAddress({ mint, owner });
+
+  // Presale vault (ATA of presale_state PDA holding tokens)
+  const presaleTokenAccount = await anchor.utils.token.associatedAddress({
+    mint,
+    owner: presaleState, // presale_state PDA owns the vault
+  });
 
   console.log("Owner:", owner.toBase58());
   console.log("Mint:", mint.toBase58());
   console.log("Owner ATA:", ownerAta.toBase58());
+  console.log("Presale token ATA:", presaleTokenAccount.toBase58());
   console.log("Amount (raw units):", amountRaw);
 
   const tx = await (program.methods as any)
@@ -25,6 +32,7 @@ async function withdrawToken(amountRaw: number) {
     .accounts({
       owner,
       presaleState,
+      presaleTokenAccount,       // <-- must provide now
       mintAuth,
       mint,
       ownerTokenAccount: ownerAta,
