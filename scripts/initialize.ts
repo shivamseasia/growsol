@@ -2,18 +2,15 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import dotenv from "dotenv";
-import { program, provider } from "./common";
+import { program, provider, presaleConfigPda, presaleStatePda } from "./common";
 
 dotenv.config();
 
 async function initialize() {
   const owner = provider.wallet.publicKey;
 
-  // Derive PDAs for logging
-  const [presaleStatePda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("presale_state")],
-    program.programId
-  );
+  const presaleConfig = presaleConfigPda();
+  const presaleState = presaleStatePda();
 
   const [mintAuthPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("mint_auth")],
@@ -25,36 +22,36 @@ async function initialize() {
     program.programId
   );
 
-  // Create new token mint keypair
   const mint = Keypair.generate();
 
   console.log("Owner wallet:", owner.toBase58());
-  console.log("PresaleState PDA:", presaleStatePda.toBase58());
+  console.log("PresaleConfig PDA:", presaleConfig.toBase58());
+  console.log("PresaleState PDA:", presaleState.toBase58());
   console.log("Mint:", mint.publicKey.toBase58());
   console.log("Mint Auth PDA:", mintAuthPda.toBase58());
   console.log("Treasury PDA:", treasuryPda.toBase58());
 
-  // Example: args
   const usdPerSolNumber = Number(process.argv[2]) || 20;
 
   const now = Math.floor(Date.now() / 1000);
 
-  // ❗ MUST wrap timestamps in BN to avoid `.toTwos` crash
   const startTsBN = new anchor.BN(Number(process.argv[3]) || now);
   const endTsBN = new anchor.BN(Number(process.argv[4]) || now + 7 * 24 * 3600);
 
-  console.log(`Using usd_per_sol=${usdPerSolNumber}, start=${startTsBN.toString()}, end=${endTsBN.toString()}`);
+  console.log(
+    `Using usd_per_sol=${usdPerSolNumber}, start=${startTsBN.toString()}, end=${endTsBN.toString()}`
+  );
 
-  // Call initialize instruction
   const tx = await (program.methods as any)
     .initialize(
-      new anchor.BN(usdPerSolNumber), // BN
-      startTsBN,                      // BN
-      endTsBN                         // BN
+      new anchor.BN(usdPerSolNumber),
+      startTsBN,
+      endTsBN
     )
     .accounts({
       owner,
-      presaleState: presaleStatePda,
+      presaleConfig,
+      presaleState,
       mint: mint.publicKey,
       mintAuth: mintAuthPda,
       treasury: treasuryPda,

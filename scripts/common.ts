@@ -10,15 +10,19 @@ export const provider = anchor.AnchorProvider.env();
 anchor.setProvider(provider);
 export const program = anchor.workspace.Growsol as anchor.Program<any>;
 
-export function presaleStatePda() {
+export function presaleStatePda(): PublicKey {
   return PublicKey.findProgramAddressSync([Buffer.from("presale_state")], program.programId)[0];
 }
 
-export function mintAuthPda() {
+export function presaleConfigPda(): PublicKey {
+  return presaleStatePda();
+}
+
+export function mintAuthPda(): PublicKey {
   return PublicKey.findProgramAddressSync([Buffer.from("mint_auth")], program.programId)[0];
 }
 
-export function treasuryPda() {
+export function treasuryPda(): PublicKey {
   return PublicKey.findProgramAddressSync([Buffer.from("treasury")], program.programId)[0];
 }
 
@@ -26,7 +30,7 @@ export function treasuryPda() {
  * Derive user_allocation PDA for a given buyer pubkey
  * seeds: ["user_alloc", presale_state.key(), buyer.key()]
  */
-export function userAllocationPdaFor(buyer: PublicKey) {
+export function userAllocationPdaFor(buyer: PublicKey): PublicKey {
   const state = presaleStatePda();
   return PublicKey.findProgramAddressSync(
     [Buffer.from("user_alloc"), state.toBuffer(), buyer.toBuffer()],
