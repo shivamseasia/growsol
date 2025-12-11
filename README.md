@@ -9,11 +9,11 @@ Built using the **Anchor framework** on Solana.
 
 Before you begin, make sure you have the following tools installed:
 
-- **[Rust](https://rust-lang.org/tools/install/)** – The Rust programming language and toolchain.  
-- **[Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)** – Rust’s package manager.  
-- **[Anchor CLI](https://project-serum.github.io/anchor/getting-started/installation.html)** – Command-line interface for Solana Anchor development.  
-- **[Node.js](https://nodejs.org/en/download/)** – JavaScript runtime for running scripts.  
-- **[Yarn](https://yarnpkg.com/getting-started/install)** – Package manager for JavaScript dependencies.  
+- **[Rust](https://rust-lang.org/tools/install/)** – The Rust programming language and toolchain. (Version: rustc 1.90.0)
+- **[Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)** – Rust’s package manager. (Version: cargo 1.90.0)
+- **[Anchor CLI](https://project-serum.github.io/anchor/getting-started/installation.html)** – Command-line interface for Solana Anchor development. (Version: anchor-cli 0.32.1)
+- **[Node.js](https://nodejs.org/en/download/)** – JavaScript runtime for running scripts. (Version: v20.19.5) 
+- **[Yarn](https://yarnpkg.com/getting-started/install)** – Package manager for JavaScript dependencies. (Version: 1.22.22)
 
 ---
 
@@ -81,4 +81,8 @@ Before you begin, make sure you have the following tools installed:
    ```bash
    # pause sale:
    npm run resume-sale
+   ```
+   ```bash
+   # To get current state:
+   npm run state
    ```
